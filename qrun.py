@@ -6,6 +6,5 @@ try:
 except:
     script = "main.py"
 
-os.system("git fetch origin master")
 os.system("git pull origin master")
 os.system("python3 " + script)
