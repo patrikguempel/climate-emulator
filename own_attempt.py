@@ -10,6 +10,11 @@ import argparse
 import glob
 import random
 
+mli_mean = xr.open_dataset('./norm_factors/mli_mean.nc')
+mli_min = xr.open_dataset('./norm_factors/mli_min.nc')
+mli_max = xr.open_dataset('./norm_factors/mli_max.nc')
+mlo_scale = xr.open_dataset('./norm_factors/mlo_scale.nc')
+
 def load_nc_dir_with_generator(filelist: list):
     def gen():
         for file in filelist:
@@ -52,10 +57,10 @@ def main():
                 'cam_out_PRECC', 'cam_out_SOLS', 'cam_out_SOLL', 'cam_out_SOLSD', 'cam_out_SOLLD']
 
     # normalization/scaling factors
-    mli_mean = xr.open_dataset('../../norm_factors/mli_mean.nc', engine='netcdf4')
-    mli_min = xr.open_dataset('../../norm_factors/mli_min.nc', engine='netcdf4')
-    mli_max = xr.open_dataset('../../norm_factors/mli_max.nc', engine='netcdf4')
-    mlo_scale = xr.open_dataset('../../norm_factors/mlo_scale.nc', engine='netcdf4')
+    #mli_mean = xr.open_dataset('../../norm_factors/mli_mean.nc', engine='netcdf4')
+    #mli_min = xr.open_dataset('../../norm_factors/mli_min.nc', engine='netcdf4')
+    #mli_max = xr.open_dataset('../../norm_factors/mli_max.nc', engine='netcdf4')
+    #mlo_scale = xr.open_dataset('../../norm_factors/mlo_scale.nc', engine='netcdf4')
 
     # train dataset for HPO
     # (subsampling id done here by "stride_sample")
