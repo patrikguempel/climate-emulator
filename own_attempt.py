@@ -10,10 +10,10 @@ import argparse
 import glob
 import random
 
-mli_mean = xr.open_dataset('./norm_factors/mli_mean.nc')
-mli_min = xr.open_dataset('./norm_factors/mli_min.nc')
-mli_max = xr.open_dataset('./norm_factors/mli_max.nc')
-mlo_scale = xr.open_dataset('./norm_factors/mlo_scale.nc')
+mli_mean = xr.open_dataset('./norm/input_mean.nc')
+mli_min = xr.open_dataset('./norm/input_min.nc')
+mli_max = xr.open_dataset('./norm/input_max.nc')
+mlo_scale = xr.open_dataset('./norm/output_scale.nc')
 
 def load_nc_dir_with_generator(filelist: list):
     def gen():
@@ -79,13 +79,8 @@ def main():
     random.shuffle(f_mli_val)
     f_mli_val = f_mli_val[::stride_sample]
 
-N_EPOCHS = 30
-shuffle_buffer = 12 * 384  # ncol=384
-batch_size = 96  # 384/4
-
-def train():
-    n = 0
-    while n < N_EPOCHS:
+def train(N_EPOCHS: int = 30, shuffle_buffer: int = 12 * 384, batch_size = 96): #ncol = 384      384/4 = 96
+    for n in range(N_EPOCHS):
         random.shuffle(f_mli)
         tds = load_nc_dir_with_generator(f_mli)  # global shuffle by file names
         tds = tds.unbatch()
@@ -104,5 +99,3 @@ def train():
         model.fit(tds,
                   validation_data=tds_val,
                   callbacks=my_callbacks)
-
-        n += 1
