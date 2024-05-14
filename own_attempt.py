@@ -78,3 +78,31 @@ def main():
     f_mli_val = sorted([*f_mli1, *f_mli2, *f_mli3])
     random.shuffle(f_mli_val)
     f_mli_val = f_mli_val[::stride_sample]
+
+N_EPOCHS = 30
+shuffle_buffer = 12 * 384  # ncol=384
+batch_size = 96  # 384/4
+
+def train():
+    n = 0
+    while n < N_EPOCHS:
+        random.shuffle(f_mli)
+        tds = load_nc_dir_with_generator(f_mli)  # global shuffle by file names
+        tds = tds.unbatch()
+        # local shuffle by elements    tds = tds.shuffle(buffer_size=shuffle_buffer, reshuffle_each_iteration=False)
+        tds = tds.batch(batch_size)
+        tds = tds.prefetch(buffer_size=int(shuffle_buffer / 384))  # in realtion to the batch size
+
+        random.shuffle(f_mli_val)
+        tds_val = load_nc_dir_with_generator(f_mli_val)
+        tds_val = tds_val.unbatch()
+        tds_val = tds_val.shuffle(buffer_size=shuffle_buffer, reshuffle_each_iteration=False)
+        tds_val = tds_val.batch(batch_size)
+        tds_val = tds_val.prefetch(buffer_size=int(shuffle_buffer / 384))
+
+        print(f'Epoch: {n + 1}')
+        model.fit(tds,
+                  validation_data=tds_val,
+                  callbacks=my_callbacks)
+
+        n += 1
