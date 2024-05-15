@@ -1,3 +1,4 @@
+import own_attempt
 
 if __name__ == '__main__':
-    print("Hello World2!")
+    main()
