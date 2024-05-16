@@ -5,7 +5,6 @@ from tensorflow import keras
 from keras import models
 from keras import layers
 from keras import callbacks
-from tensorflow.keras.optimizers import Adam
 import os
 import argparse
 import glob
@@ -140,5 +139,3 @@ def train(f_mli, f_mli_val, model: keras.Model, n_epochs: int = 30, shuffle_buff
                   validation_data=tds_val,
               #    callbacks=my_callbacks
                   )
-
-main()
