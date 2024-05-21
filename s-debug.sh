@@ -6,7 +6,6 @@
 #SBATCH --output=slurm_output.txt
 
 module load TensorFlow
-module load git
 git pull origin master
 source myenv/bin/activate
 python main.py remote
