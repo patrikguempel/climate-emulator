@@ -63,6 +63,8 @@ def main():
     # (subsampling id done here by "stride_sample")
 
     remote = sys.argv[1] == "remote"
+    if remote:
+        print("<<< EXECUTING REMOTELY... >>>")
 
     f_mli, f_mli_val = getDataPaths(remote=remote)
     model: keras.Model = createModel()
