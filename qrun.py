@@ -7,4 +7,4 @@ except:
     script = "main.py"
 
 os.system("git pull origin master")
-os.system("python3 " + script)
+os.system("python3 " + script + " remote")
