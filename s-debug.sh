@@ -6,4 +6,4 @@
 
 module load Python
 git pull origin master
-python main.py
+python main.py remote
