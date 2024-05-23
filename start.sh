@@ -8,4 +8,4 @@
 
 module load TensorFlow
 source myenv/bin/activate
-python main.py remote attempt1
+python main.py

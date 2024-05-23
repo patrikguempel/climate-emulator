@@ -62,8 +62,8 @@ def main():
     # train dataset for HPO
     # (subsampling id done here by "stride_sample")
 
-    remote = sys.argv[1] == "remote"
-    modelName = sys.argv[2]
+    remote = True
+    modelName = "attempt1"
     if remote:
         print("<<< EXECUTING REMOTELY... >>>")
 
