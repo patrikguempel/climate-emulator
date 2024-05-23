@@ -94,7 +94,7 @@ def createModel():
     # compile
     model.compile(optimizer=keras.optimizers.Adam(),  # optimizer=keras.optimizers.Adam(learning_rate=clr),
                   loss='mse',
-                  metrics=['mse', 'mae', 'accuracy'])
+                  metrics=['mse', 'val_mse', 'mae', 'accuracy'])
 
     return model
 
