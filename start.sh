@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=A100short
+#SBATCH --partition=A40short
 #SBATCH --time=7:59:00
 #SBATCH --gpus=2
 #SBATCH --ntasks=1
