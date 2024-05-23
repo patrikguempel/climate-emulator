@@ -63,12 +63,13 @@ def main():
     # (subsampling id done here by "stride_sample")
 
     remote = sys.argv[1] == "remote"
+    modelName = sys.argv[2]
     if remote:
         print("<<< EXECUTING REMOTELY... >>>")
 
     f_mli, f_mli_val = getDataPaths(remote=remote)
     model: keras.Model = createModel()
-    train(f_mli, f_mli_val, model)
+    train(f_mli, f_mli_val, model, modelName)
 
 
 def createModel():
@@ -79,12 +80,12 @@ def createModel():
     n_nodes = 512
 
     # construct a model
-    input_layer  = keras.layers.Input(shape=(input_length,), name='input')
-    hidden_0     = keras.layers.Dense(n_nodes, activation='relu')(input_layer)
-    hidden_1     = keras.layers.Dense(n_nodes, activation='relu')(hidden_0)
-    output_pre   = keras.layers.Dense(output_length, activation='elu')(hidden_1)
-    output_lin   = keras.layers.Dense(output_length_lin, activation='linear')(output_pre)
-    output_relu  = keras.layers.Dense(output_length_relu, activation='relu')(output_pre)
+    input_layer = keras.layers.Input(shape=(input_length,), name='input')
+    hidden_0 = keras.layers.Dense(n_nodes, activation='relu')(input_layer)
+    hidden_1 = keras.layers.Dense(n_nodes, activation='relu')(hidden_0)
+    output_pre = keras.layers.Dense(output_length, activation='elu')(hidden_1)
+    output_lin = keras.layers.Dense(output_length_lin, activation='linear')(output_pre)
+    output_relu = keras.layers.Dense(output_length_relu, activation='relu')(output_pre)
     output_layer = keras.layers.Concatenate()([output_lin, output_relu])
 
     model = keras.Model(input_layer, output_layer, name='Emulator')
@@ -120,7 +121,29 @@ def getDataPaths(remote: bool, stride_sample: int = 37):
     return f_mli, f_mli_val
 
 
-def train(f_mli, f_mli_val, model: keras.Model, n_epochs: int = 30, shuffle_buffer: int = 12 * 384, batch_size=96):  # ncol = 384      384/4 = 96
+def train(f_mli, f_mli_val, model: keras.Model, modelName: str, n_epochs: int = 30, shuffle_buffer: int = 12 * 384,
+          batch_size=96):  # ncol = 384      384/4 = 96
+
+    path = "./models/" + modelName + "/"
+    # callbacks
+    # a. tensorboard
+    tboard_callback = keras.callbacks.TensorBoard(log_dir=path + 'logs_tensorboard',
+                                                  histogram_freq=1, )
+
+    # b. checkpoint
+    filepath_checkpoint = path + "model.h5"
+    checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=filepath_checkpoint,
+                                                          save_weights_only=False,
+                                                          monitor='val_mse',
+                                                          mode='min',
+                                                          save_best_only=True)
+
+    # c. csv logger
+    filepath_csv = path + 'csv_logger.txt'
+    csv_callback = keras.callbacks.CSVLogger(filepath_csv, separator=",", append=True)
+
+    my_callbacks = [tboard_callback, checkpoint_callback, csv_callback]
+
     for n in range(n_epochs):
         random.shuffle(f_mli)
         tds = loadNCdir(f_mli)  # global shuffle by file names
@@ -139,5 +162,5 @@ def train(f_mli, f_mli_val, model: keras.Model, n_epochs: int = 30, shuffle_buff
         print(f'Epoch: {n + 1}')
         model.fit(tds,
                   validation_data=tds_val,
-              #    callbacks=my_callbacks
+                  callbacks=my_callbacks
                   )
