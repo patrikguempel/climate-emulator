@@ -94,24 +94,23 @@ def createModel():
     # compile
     model.compile(optimizer=keras.optimizers.Adam(),  # optimizer=keras.optimizers.Adam(learning_rate=clr),
                   loss='mse',
-                  metrics=['mse', 'val_mse', 'mae', 'accuracy'])
+                  metrics=['mse', 'mae', 'accuracy'])
 
     return model
 
 
-def getDataPaths(remote: bool, stride_sample: int = 37):
+def getDataPaths(remote: bool, stride_sample: int = 19):
+    #original stride sample was 37
+    #because here I only use 5 years of simulation (instead of 10), i wanna use about two times the data then
     if remote:
-        f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.000[1234567]-*-*-*.nc')
-        f_mli2 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0008-01-*-*.nc')
-        f_mli = sorted([*f_mli1, *f_mli2])
+        f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.000[1234]-*-*-*.nc')
+        f_mli = sorted([*f_mli1])
         random.shuffle(f_mli)  # to reduce IO bottleneck
         f_mli = f_mli[::stride_sample]
 
         # validation dataset for HPO
-        f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0008-0[23456789]-*-*.nc')
-        f_mli2 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0008-1[012]-*-*.nc')
-        f_mli3 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0009-01-*-*.nc')
-        f_mli_val = sorted([*f_mli1, *f_mli2, *f_mli3])
+        f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-*-*-*.nc')
+        f_mli_val = sorted([*f_mli1])
         random.shuffle(f_mli_val)
         f_mli_val = f_mli_val[::stride_sample]
     else:
