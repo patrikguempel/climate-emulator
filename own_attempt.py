@@ -1,15 +1,8 @@
 import xarray as xr
-import numpy as np
 import tensorflow as tf
-from tensorflow.python import keras
-from keras import models
-from keras import layers
-from keras import callbacks
-import os
-import argparse
+from tensorflow import keras
 import glob
 import random
-import sys
 
 mli_mean = xr.open_dataset('./norm/input_mean.nc')
 mli_min = xr.open_dataset('./norm/input_min.nc')
@@ -62,12 +55,9 @@ def main():
     # train dataset for HPO
     # (subsampling id done here by "stride_sample")
 
-    remote = True
-    modelName = "attempt1"
-    if remote:
-        print("<<< EXECUTING REMOTELY... >>>")
+    modelName = "attempt2"
 
-    f_mli, f_mli_val = getDataPaths(remote=remote)
+    f_mli, f_mli_val = getDataPaths(remote=True)
     model: keras.Model = createModel()
     train(f_mli, f_mli_val, model, modelName)
 

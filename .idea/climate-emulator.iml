@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/venv-2" />
       <excludeFolder url="file://$MODULE_DIR$/venv-conda" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.10" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Remote Python 3.6.8 (sftp://s6paguem@bender.hpc.uni-bonn.de:22/home/s6paguem/climate-emulator/remoteenv/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

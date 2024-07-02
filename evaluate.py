@@ -1,10 +1,10 @@
 import tensorflow as tf
-from tensorflow.python import keras
+from tensorflow import keras
 from pathlib import Path
 
 
-def evaluate(modelName: str):
-    model: keras.Model = keras.models.load_model(f"./models/own/{modelName}/model.h5")
+def evaluate(modelName: str, own: bool = True):
+    model: keras.Model = keras.models.load_model(f"./models/{'own' if own else 'baseline_models'}/{modelName}/model.h5")
 
     model.summary()
     # model.evaluate()
