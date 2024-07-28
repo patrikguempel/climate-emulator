@@ -323,6 +323,7 @@ def main():
                                                 output_signature=(
                                                 tf.TensorSpec(shape=(60, 6), dtype=tf.float32),
                                                 tf.TensorSpec(shape=(60, 10), dtype=tf.float32)))
+
     val_ds = tf.data.Dataset.from_generator(val_input_generator,
                                                 output_signature=(
                                                 tf.TensorSpec(shape=(60, 6), dtype=tf.float32),

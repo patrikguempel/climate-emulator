@@ -64,8 +64,10 @@ def dataset_to_numpy(dataset: tf.data.Dataset):
 
 
 def getDataPaths(stride_sample=19):
-    val_datapaths = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-*-*-*.nc')
-    val_datapaths = sorted([*val_datapaths])
+    f_mli1 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-0[23456789]-*-*.nc')
+    f_mli2 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-1[012]-*-*.nc')
+    f_mli3 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0006-01-*-*.nc')
+    val_datapaths = sorted([*f_mli1, *f_mli2, *f_mli3])
     random.shuffle(val_datapaths)
     return val_datapaths[::stride_sample]
 
@@ -325,6 +327,7 @@ def createMetricsCSV(model_name: str, own=True):
 
     # Save grid-wise metric files in netcdf format
     if True:
+        os.makedirs(f'{evaluationPath}/gridwise/', exist_ok=True)
         for kmetric in ['MAE', 'RMSE', 'R2']:
             fn_save = f'{evaluationPath}/gridwise/{kmetric}.nc'
             Metrics[kmetric].to_netcdf(fn_save)
@@ -379,5 +382,5 @@ def createMetricsCSV(model_name: str, own=True):
 
 
 modelName = "attempt2"
-#createScoringData(modelName)
+createScoringData(modelName)
 createMetricsCSV(modelName)
