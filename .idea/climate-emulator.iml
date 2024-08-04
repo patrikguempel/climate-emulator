@@ -9,4 +9,12 @@
     <orderEntry type="jdk" jdkName="Remote Python 3.6.8 (sftp://s6paguem@bender.hpc.uni-bonn.de:22/home/s6paguem/climate-emulator/remoteenv/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PyNamespacePackagesService">
+    <option name="namespacePackageFolders">
+      <list>
+        <option value="$MODULE_DIR$/train" />
+        <option value="$MODULE_DIR$/scoring" />
+      </list>
+    </option>
+  </component>
 </module>

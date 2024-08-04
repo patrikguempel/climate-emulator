@@ -4,10 +4,10 @@ from tensorflow import keras
 import glob
 import random
 
-mli_mean = xr.open_dataset('./norm/input_mean.nc')
-mli_min = xr.open_dataset('./norm/input_min.nc')
-mli_max = xr.open_dataset('./norm/input_max.nc')
-mlo_scale = xr.open_dataset('./norm/output_scale.nc')
+mli_mean = xr.open_dataset('../norm/input_mean.nc')
+mli_min = xr.open_dataset('../norm/input_min.nc')
+mli_max = xr.open_dataset('../norm/input_max.nc')
+mlo_scale = xr.open_dataset('../norm/output_scale.nc')
 
 # in/out variable lists
 vars_mli = ['state_t', 'state_q0001', 'state_ps', 'pbuf_SOLIN', 'pbuf_LHFLX', 'pbuf_SHFLX']

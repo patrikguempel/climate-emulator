@@ -44,7 +44,7 @@ def get_filenames(dataroot, filenames):
     # random.shuffle(f_mli) # I commented this out. It seems unnecessary to shuffle twice.
 
     return filepaths
-
+ä
 
 def set_environment(num_gpus_per_node=1, oracle_port="32768"):
     """

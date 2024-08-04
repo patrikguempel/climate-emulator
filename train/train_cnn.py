@@ -5,7 +5,7 @@ import glob
 import random
 from keras.layers.convolutional import Conv1D
 from keras import backend as K
-
+import os
 
 mli_mean = xr.open_dataset('./norm/input_mean.nc')
 mli_min = xr.open_dataset('./norm/input_min.nc')
@@ -17,6 +17,51 @@ vars_mli = ['state_t', 'state_q0001', 'state_ps', 'pbuf_SOLIN', 'pbuf_LHFLX', 'p
 vars_mlo = ['ptend_t', 'ptend_q0001', 'cam_out_NETSW', 'cam_out_FLWDS', 'cam_out_PRECSC',
             'cam_out_PRECC', 'cam_out_SOLS', 'cam_out_SOLL', 'cam_out_SOLSD', 'cam_out_SOLLD']
 
+def set_environment(workers_per_node, workers_per_gpu):
+    print('<< set_environment START >>')
+    nodename = os.environ['SLURMD_NODENAME']
+    procid = os.environ['SLURM_LOCALID']
+    print(f'node name: {nodename}')
+    print(f'procid:    {procid}')
+    # stream = os.popen('scontrol show hostname $SLURM_NODELIST')
+    # output = stream.read()
+    # oracle = output.split("\n")[0]
+    if procid==str(workers_per_node): # This takes advantage of the fact that procid numbering starts with ZERO
+        os.environ["KERASTUNER_TUNER_ID"] = "chief"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        print("Keras Tuner Oracle has been assigned.")
+    else:
+        os.environ["KERASTUNER_TUNER_ID"] = "tuner-" + str(nodename) + "-" + str(procid)
+        os.environ["CUDA_VISIBLE_DEVICES"] = f"{int(int(procid)//workers_per_gpu)}"
+    print(f'SY DEBUG: procid-{procid} / GPU-ID-{os.environ["CUDA_VISIBLE_DEVICES"]}')
+
+    #print(os.environ)
+    print('<< set_environment END >>')
+
+
+
+def pad_and_stack_layers_and_vars_1d(ds, dso):
+    """
+    Pads and stack all variables into (batch, n_vertical_levels, n_variables),
+    e.g., input: (batch, 60, 6) and output: (batch, 60, 10)
+    Args:
+        ds xarray.Dataset(lev, ncol) with vars_mli of shapes (lev, ncol) and (ncol)
+        dso xarray.Dataset(lev, ncol) with vars_mlo of shapes (lev, ncol) and (ncol)
+    Returns:
+        arr xarray.DataArray(batch, lev, variable)
+        arro xarray.DataArray(batch, lev, variable)
+    """
+    ds = ds.stack({"batch": {"ncol"}})
+    (ds,) = xr.broadcast(ds)  # repeat global variables across levels
+    arr = ds.to_array("mlvar", name="mli")
+    arr = arr.transpose("batch", "lev", "mlvar")
+
+    dso = dso.stack({"batch": {"ncol"}})
+    (dso,) = xr.broadcast(dso)
+    arro = dso.to_array("mlvar", name="mlo")
+    arro = arro.transpose("batch", "lev", "mlvar")
+
+    return arr, arro
 
 def loadNCdir(filelist: list):
     def gen():
@@ -38,24 +83,21 @@ def loadNCdir(filelist: list):
             dso = dso * mlo_scale
 
             # stack
-            # ds = ds.stack({'batch':{'sample','ncol'}})
-            ds = ds.stack({'batch': {'ncol'}})
-            ds = ds.to_stacked_array("mlvar", sample_dims=["batch"], name='mli')
-            # dso = dso.stack({'batch':{'sample','ncol'}})
-            dso = dso.stack({'batch': {'ncol'}})
-            dso = dso.to_stacked_array("mlvar", sample_dims=["batch"], name='mlo')
+            ds, dso = pad_and_stack_layers_and_vars_1d(ds, dso)
 
-            yield (ds.values, dso.values)
+            num_samples = ds.shape[0]
+            for i in range(num_samples):
+                yield ds[i], dso[i]
+
 
     return tf.data.Dataset.from_generator(gen,
                                         output_signature=(
-                                            tf.TensorSpec(shape=(60, 6), dtype=tf.float32),
-                                            tf.TensorSpec(shape=(60, 10), dtype=tf.float32)))
-
-
+                                        tf.TensorSpec(shape=(60, 6), dtype=tf.float32),
+                                        tf.TensorSpec(shape=(60, 10), dtype=tf.float32)))
 def main():
-    modelName = "mlp1"
+    modelName = "cnn2"
 
+    set_environment(1, 1)
     f_mli, f_mli_val = getDataPaths(stride_sample=19)     # (subsampling is done here by "stride_sample")
     model: keras.Model = createModel()
     train(f_mli, f_mli_val, model, modelName)
@@ -69,6 +111,20 @@ def mse_adjusted(y_true, y_pred):
 def mae_adjusted(y_true, y_pred):
     ae = K.abs(y_pred - y_true)
     return K.mean(ae[:, :, 0:2]) * (120 / 128) + K.mean(ae[:, :, 2:10]) * (8 / 128)
+
+def decode_fn(record_bytes):
+    record = tf.io.parse_single_example(
+        record_bytes,
+        {
+            'X': tf.io.FixedLenFeature([360], dtype=tf.float32),
+            'Y': tf.io.FixedLenFeature([600], dtype=tf.float32)
+        }
+    )
+    x = tf.reshape(record["X"], (60, 6))
+    #x = x[None, :, :]
+    y = tf.reshape(record["Y"], (60, 10))
+    #y = y[None, :, :]
+    return (x, y)
 
 def continuous_ranked_probability_score(y_true, y_pred):
     """Continuous Ranked Probability Score.
@@ -217,25 +273,25 @@ def createModel():
 def getDataPaths(stride_sample=19):
     #original stride sample was 37
     #because here I only use 5 years of simulation (instead of 10), i wanna use about two times the data then
-    f_mli1 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.000[1234]-*-*-*.nc')
-    f_mli2 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-01-*-*.nc')
-    f_mli = sorted([*f_mli1, *f_mli2])
+    f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.000[1234]-*-*-*.nc')
+    f_mli2 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-01-*-*.nc')
+    f_mli = [*f_mli1, *f_mli2]
     random.shuffle(f_mli)  # to reduce IO bottleneck
     f_mli = f_mli[::stride_sample]
 
     # validation dataset for HPO
-    f_mli1 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-0[23456789]-*-*.nc')
-    f_mli2 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-1[012]-*-*.nc')
-    f_mli3 = glob.glob('../../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0006-01-*-*.nc')
-    f_mli_val = sorted([*f_mli1, *f_mli2, *f_mli3])
+    f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-0[23456789]-*-*.nc')
+    f_mli2 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-1[012]-*-*.nc')
+    f_mli3 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0006-01-*-*.nc')
+    f_mli_val = [*f_mli1, *f_mli2, *f_mli3]
     random.shuffle(f_mli_val)
     f_mli_val = f_mli_val[::stride_sample]
 
     return f_mli, f_mli_val
 
 
-def train(f_mli, f_mli_val, model: keras.Model, modelName: str, n_epochs: int = 30, shuffle_buffer: int = 12 * 384,
-          batch_size=96):  # ncol = 384      384/4 = 96
+def train(f_mli, f_mli_val, model: keras.Model, modelName: str, shuffle_buffer: int = 12 * 384,
+          batch_size=15):
 
     path = "./models/" + modelName + "/"
     # callbacks
@@ -259,26 +315,22 @@ def train(f_mli, f_mli_val, model: keras.Model, modelName: str, n_epochs: int = 
 
     max_epochs = 15
 
-    tds = loadNCdir(f_mli) \
-            .unbatch() \
-            .repeat(max_epochs) \
-            .shuffle(shuffle_buffer) \
-            .batch(batch_size, drop_remainder=True) \
-            .prefetch(tf.data.AUTOTUNE)
+    train_ds = loadNCdir(f_mli).repeat(max_epochs) \
+        .shuffle(shuffle_buffer) \
+        .batch(batch_size, drop_remainder=True) \
+        .prefetch(tf.data.AUTOTUNE)
+    val_ds = loadNCdir(f_mli_val)\
+        .batch(batch_size) \
+        .prefetch(tf.data.AUTOTUNE)
 
-    tds_val = loadNCdir(f_mli_val) \
-            .unbatch() \
-            .shuffle(shuffle_buffer) \
-            .batch(batch_size) \
-            .prefetch(tf.data.AUTOTUNE)
 
     print("Data loaded!")
 
     model.fit(
-        tds,
+        train_ds,
         epochs=max_epochs,
-        steps_per_epoch=10091520 // batch_size,
-        validation_data=tds_val,
+        steps_per_epoch=2124672 // batch_size,
+        validation_data=val_ds,
         verbose=1,
         shuffle=True,
         use_multiprocessing=True,
