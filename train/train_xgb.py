@@ -1,8 +1,18 @@
+import os
+
 import numpy as np
 import xgboost as xgb
+from xgboost.callback import EarlyStopping, EvaluationMonitor
+import logging
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
-modelName = "xgb1"
+logging.info("Loading Data...")
 
 train_x = np.load("train/npy_data/train_input.npy")
 train_y = np.load("train/npy_data/train_target.npy")
@@ -13,33 +23,59 @@ dtrain = xgb.DMatrix(train_x, label=train_y)
 dval = xgb.DMatrix(val_x, label=val_y)
 
 params = {
-    'max_depth': 6,
-    'eta': 0.1,
-    'objective': 'reg:squarederror'
+    'objective': 'reg:squarederror',            #Used for regression
+    'learning_rate': 0.1,
+    'subsample': 0.6,                           # 80% der Trainingsdaten verwenden
+    'colsample_bytree': 0.8,
+    'verbosity': 1,                             #logging
+    'tree_method': 'hist',
+    'device': 'cuda'                            #make XGB use the GPUs
 }
 
-cv_results = xgb.cv(
-    params,
-    dtrain,
-    num_boost_round=1000,  # Eine hohe Anzahl an Runden
-    nfold=5,
-    metrics="rmse",  # Metrik, um die Leistung zu bewerten
-    early_stopping_rounds=50,  # Stoppen, wenn sich die Leistung nicht verbessert
-    as_pandas=True,
-    seed=42
-)
+logging.info("Data loaded!")
 
-# Beste Anzahl von Runden basierend auf Cross-Validation
-best_num_rounds = cv_results.shape[0]
+def cross_evaluation():
+    logging.info("Performing Cross Validation...")
 
-evals = [(dtrain, 'train'), (dval, 'eval')]
+    cv_results = xgb.cv(
+        params,
+        dtrain,
+        num_boost_round=5000,                        # High amount of rounds
+        nfold=5,
+        metrics="rmse",                             # Evaluate by rmse
+        early_stopping_rounds=50,                   # Stop if performance is not increasing
+        seed=42,
+        verbose_eval=True                           # log
+    )
+    logging.info(f"Best Boosting-Round: {len(cv_results)}")
+    logging.info(f"Cross-Validation Results: \n{cv_results}")
 
-bst = xgb.train(params,
-                dtrain,
-                best_num_rounds,
-                evals=evals,
-                early_stopping_rounds=50)
+def train():
+    logging.info("Training...")
 
-bst.save_model(f"./models/{modelName}/xgb_model.model")
-print("Done!")
+    evals = [(dtrain, 'train'), (dval, 'eval')]
 
+    for max_depth in range(10, 17):
+        params['max_depth'] = max_depth
+
+        logging.info(f"Training model with max-depth {max_depth}...")
+
+        bst = xgb.train(params,
+                        dtrain,
+                        num_boost_round=5000,
+                        evals=evals,
+                        early_stopping_rounds=50,
+                        callbacks=[
+                            EarlyStopping(rounds=50, save_best=True, maximize=False, data_name='eval', metric_name='rmse'),
+                        ],
+                        verbose_eval=True
+        )
+
+        logging.info(f"Saving with max-depth {max_depth}...")
+        path = f"./models/xgb/d{max_depth}-s60"
+        os.makedirs(path, exist_ok=True)
+        bst.save_model(f"{path}/model.ubj")
+        logging.info("Done!")
+
+#cross_evaluation()
+train()

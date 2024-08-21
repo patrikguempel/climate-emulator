@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --partition=A40medium
-#SBATCH --gpus=2
+#SBATCH --partition=A40short
+#SBATCH --gpus=1
 #SBATCH --ntasks=1
-#SBATCH --output=./output/slurm_output_xgb1.txt
-#SBATCH --job-name=xgb1
+#SBATCH --output=./output/slurm_output_evaluate_mb_mlp3.txt
+#SBATCH --job-name=eval
 
 module load TensorFlow
 source myenv/bin/activate
-python train/train_xgb.py
+python scoring/evaluate.py

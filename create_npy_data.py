@@ -14,7 +14,7 @@ data = data_utils(grid_info=grid_info,
                   input_min=mli_min,
                   output_scale=mlo_scale)
 
-data.set_to_v1_vars()
+data.set_to_v2_vars()
 data.data_path = '../climsim-dataset/ClimSim_low-res/train/'
 
 print("Creating training data...")
@@ -24,7 +24,7 @@ data.set_regexps(data_split="train",
                           "E3SM-MMF.mli.0005-01-*-*.nc"])
 data.set_stride_sample(data_split="train", stride_sample=19)
 data.set_filelist(data_split="train")
-data.save_as_npy(data_split="train", save_path="train/npy_data/")
+data.save_as_npy(data_split="train", save_path="train/npy_data_v2/")
 
 print("Creating validation data...")
 
@@ -34,7 +34,7 @@ data.set_regexps(data_split="val",
                           "E3SM-MMF.mli.0006-01-*-*.nc"])
 data.set_stride_sample(data_split="val", stride_sample=19)
 data.set_filelist(data_split="val")
-data.save_as_npy(data_split="val", save_path="train/npy_data/")
+data.save_as_npy(data_split="val", save_path="train/npy_data_v2/")
 
 print("Done!")
 

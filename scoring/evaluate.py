@@ -6,9 +6,19 @@ import tensorflow as tf
 import xarray as xr
 import numpy as np
 import pandas as pd
+import xgboost as xgb
+
 from tensorflow.keras import backend as K
 
 from data_utils import data_utils
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 mli_mean = xr.open_dataset('norm/input_mean.nc')
 mli_min = xr.open_dataset('norm/input_min.nc')
@@ -77,33 +87,33 @@ def getDataPaths(stride_sample=19):
     return val_datapaths[::stride_sample]
 
 def createScoringData():
-    print("Creating scoring data...")
+    logging.info("Creating scoring data...")
     inputs, outputs = dataset_to_numpy(loadNCdir(getDataPaths()))
-    print("Dataset converted! Inputs: " + str(inputs.shape) + "| Outputs" + str(outputs.shape))
+    logging.info("Dataset converted! Inputs: " + str(inputs.shape) + "| Outputs" + str(outputs.shape))
 
     scoringPath = "scoring"
     os.makedirs(scoringPath, exist_ok=True)
 
     np.save(f"{scoringPath}/inputs.npy", inputs)
     np.save(f"{scoringPath}/true_outputs.npy", outputs)
-    print("Data saved!")
+    logging.info("Data saved!")
 
 def makePredictionsMLP(modelName: str):
     modelPath = f"models/{modelName}"
     model = tf.keras.models.load_model(f"{modelPath}/model.h5")
-    print("Model loaded!")
+    logging.info("Model loaded!")
 
     inputs = np.load("scoring/inputs.npy")
-    print("Scoring Data loaded!")
+    logging.info("Scoring Data loaded!")
 
     predictions = model.predict(inputs)
-    print("Predictions made!")
+    logging.info("Predictions made!")
 
     evaluationPath = f"{modelPath}/evaluation"
     os.makedirs(evaluationPath, exist_ok=True)
 
     np.save(f"{evaluationPath}/predictions.npy", predictions)
-    print("Predictions saved!")
+    logging.info("Predictions saved!")
 
 
 def makePredictionsCNN(modelName: str):
@@ -127,12 +137,12 @@ def makePredictionsCNN(modelName: str):
     model = tf.keras.models.load_model(f"{modelPath}/model.h5", custom_objects={'mae_adjusted': mae_adjusted,
                                                                                 'mse_adjusted': mse_adjusted,
                                                                                 'continuous_ranked_probability_score': continuous_ranked_probability_score})
-    print("Model loaded!")
+    logging.info("Model loaded!")
 
     inputs = np.load("scoring/inputs.npy")
-    print("Scoring Data loaded!")
+    logging.info("Scoring Data loaded!")
 
-    print("Reshaping dataset for CNN...")
+    logging.info("Reshaping dataset for CNN...")
     data = data_utils(grid_info=grid_info,
                       input_mean=mli_mean,
                       input_max=mli_max,
@@ -142,29 +152,47 @@ def makePredictionsCNN(modelName: str):
     data.set_to_v1_vars()
 
     inputs_cnn = data.reshape_input_for_cnn(inputs)
-    print("Dataset reshaped! Making predictions...")
+    logging.info("Dataset reshaped! Making predictions...")
 
     predictions_cnn = model.predict(inputs_cnn)
     predictions = data.reshape_target_from_cnn(predictions_cnn)
-    print("Predictions made (and reshaped)!")
+    logging.info("Predictions made (and reshaped)!")
 
     evaluationPath = f"{modelPath}/evaluation"
     os.makedirs(evaluationPath, exist_ok=True)
 
     np.save(f"{evaluationPath}/predictions.npy", predictions)
-    print("Data saved!")
+    logging.info("Data saved!")
 
 
-def createScoringDataXGB(modelName: str):
-    modelPath = f"models/{modelName}"
-    model = tf.keras.models.load_model(f"{modelPath}/xgb_model.model")
-    print("XGB Model loaded!")
+def makePredictionsXGB(modelName: str):
+    xgp_path = f"models/xgb/{modelName}"
+
+    bst = xgb.Booster({'predictor': 'gpu_predictor'})
+    bst.load_model(f"{xgp_path}/model.ubj")
+    logging.info("Model loaded!")
+
+    inputs = np.load("scoring/inputs.npy")
+    inputs_xgb = xgb.DMatrix(inputs)
+    logging.info("Scoring Data loaded!")
+
+    logging.info("Making predictions...")
+    predictions = bst.predict(inputs_xgb)
+    logging.info("Predictions made!")
+
+    evaluationPath = f"{xgp_path}/evaluation"
+    os.makedirs(evaluationPath, exist_ok=True)
+
+    np.save(f"{evaluationPath}/predictions.npy", predictions)
+    logging.info("Data saved!")
 
 
-def createMetricsCSV(model_name: str):
-    print("Calculating Metrics CSV...")
-    evaluationPath = f"models/{model_name}/evaluation"
+
+def createMetricsCSV(model_name: str, evaluationPath = None):
+    logging.info("Calculating Metrics CSV...")
     scoringPath = "scoring"
+    if evaluationPath == None:
+        evaluationPath = f"models/{model_name}/evaluation"
 
     fn_x_true = f"{scoringPath}/inputs.npy"  # inputs
     fn_y_true = f"{scoringPath}/true_outputs.npy"  # outputs
@@ -451,10 +479,16 @@ def createMetricsCSV(model_name: str):
 
     # fn_save_metrics_avg = f'./metrics/{model_name}.metrics.lev-avg.csv'
     work.to_csv(fn_save_metrics_avg)
-    print("Done!")
+    logging.info("Done!")
 
 
-modelName = "cnn3"
-#createScoringData(modelName)
-makePredictionsCNN(modelName)
+#for modelName in ["d15-s80"]:
+#    makePredictionsXGB(modelName)
+#    createMetricsCSV(modelName, evaluationPath=f"models/xgb/{modelName}/evaluation")
+
+
+modelName = "mb_mlp3"
+makePredictionsMLP(modelName)
 createMetricsCSV(modelName)
+
+
