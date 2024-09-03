@@ -10,7 +10,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-model_name = "mb_mlp5"
+model_name = "mb_mlp_connected"
 
 logging.info("Loading Data...")
 
@@ -24,22 +24,14 @@ logging.info("Data loaded!")
 def createModel():
 
     input_layer = Input(shape=(124,))
-
-    outputs = []
-    for i in range(10):
-        if i < 2:
-            branch_start = layers.Dense(512, activation='relu')(input_layer)
-            out_hid = layers.Dense(256, activation='relu')(branch_start)
-            out_hid2 = layers.Dense(160, activation='elu')(out_hid)
-            out_lin = layers.Dense(60, activation='linear')(out_hid2)
-            outputs += [out_lin]
-        else:
-            branch_start = layers.Dense(256, activation='relu')(input_layer)
-            out_hid = layers.Dense(32, activation='elu')(branch_start)
-            out_lin = layers.Dense(1, activation='linear')(out_hid)
-            outputs += [out_lin]
-
-    output_layer = layers.Concatenate()(outputs)
+    start = layers.Dense(1792, activation='relu')(input_layer)
+    hid1 = layers.Dense(320, activation='relu')(start)
+    hid2 = layers.Dense(128, activation='elu')(start)
+    hid = layers.Concatenate()([hid1, hid2])
+    out_hid = layers.Dense(256, activation='elu')(hid)
+    out_1 = layers.Dense(120, activation='linear')(out_hid)
+    out_2 = layers.Dense(8, activation='linear')(hid)
+    output_layer = layers.Concatenate()([out_1, out_2])
 
     model = Model(input_layer, output_layer, name='MB_MLP')
     model.summary()
@@ -82,4 +74,4 @@ def trainModel(model):
               workers=4,)
 
 model = createModel()
-trainModel(model)
+#trainModel(model)

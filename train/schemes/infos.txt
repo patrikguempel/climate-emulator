@@ -1,0 +1,4 @@
+mlp2:    410.000 params
+mb_mlp4: 420.000 params
+mb_mlp_connected: 1.176.000 params
+mb_mlp_connected2: 421.000 params

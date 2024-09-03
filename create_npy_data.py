@@ -36,6 +36,14 @@ data.set_stride_sample(data_split="val", stride_sample=19)
 data.set_filelist(data_split="val")
 data.save_as_npy(data_split="val", save_path="train/npy_data_v2/")
 
-print("Done!")
+print("Creating test data...")
 
-#SCORING DATA CREATED IN evaluate.py
+data.set_regexps(data_split="val",
+                 regexps=["E3SM-MMF.mli.0006-0[23456789]-*-*.nc",
+                          "E3SM-MMF.mli.0006-1[012]-*-*.nc",
+                          "E3SM-MMF.mli.0007-01-*-*.nc"])
+data.set_stride_sample(data_split="val", stride_sample=19)
+data.set_filelist(data_split="val")
+data.save_as_npy(data_split="val", save_path="train/npy_data_v2/")
+
+print("Done!")

@@ -2,6 +2,7 @@ import glob
 import os
 import random
 
+import joblib
 import tensorflow as tf
 import xarray as xr
 import numpy as np
@@ -27,76 +28,24 @@ mlo_scale = xr.open_dataset('norm/output_scale.nc')
 grid_path = 'grid_info/ClimSim_low-res_grid-info.nc'
 grid_info = xr.open_dataset(grid_path)
 
-# in/out variable lists
-vars_mli = ['state_t', 'state_q0001', 'state_ps', 'pbuf_SOLIN', 'pbuf_LHFLX', 'pbuf_SHFLX']
-vars_mlo = ['ptend_t', 'ptend_q0001', 'cam_out_NETSW', 'cam_out_FLWDS', 'cam_out_PRECSC',
-            'cam_out_PRECC', 'cam_out_SOLS', 'cam_out_SOLL', 'cam_out_SOLSD', 'cam_out_SOLLD']
+def makePredictionsRF(modelName: str):
+    modelPath = f"models/{modelName}"
+    model = joblib.load(modelPath + "/model.pkl")
+    logging.info("Model loaded!")
+
+    inputs = np.load("scoring/inputs.npy")
+    logging.info("Scoring Data loaded!")
+
+    predictions = model.predict(inputs)
+    logging.info("Predictions made!")
+
+    evaluationPath = f"{modelPath}/evaluation"
+    os.makedirs(evaluationPath, exist_ok=True)
+
+    np.save(f"{evaluationPath}/predictions.npy", predictions)
+    logging.info("Predictions saved!")
 
 
-def loadNCdir(filelist: list):
-    def gen():
-        for file in filelist:
-            # read mli
-            ds = xr.open_dataset(file, engine='netcdf4')
-            ds = ds[vars_mli]
-
-            # read mlo
-            dso = xr.open_dataset(file.replace('.mli.', '.mlo.'), engine='netcdf4')
-
-            # make mlo variales: ptend_t and ptend_q0001
-            dso['ptend_t'] = (dso['state_t'] - ds['state_t']) / 1200  # T tendency [K/s]
-            dso['ptend_q0001'] = (dso['state_q0001'] - ds['state_q0001']) / 1200  # Q tendency [kg/kg/s]
-            dso = dso[vars_mlo]
-
-            # normalizatoin, scaling
-            ds = (ds - mli_mean) / (mli_max - mli_min)
-            dso = dso * mlo_scale
-
-            # stack
-            # ds = ds.stack({'batch':{'sample','ncol'}})
-            ds = ds.stack({'batch': {'ncol'}})
-            ds = ds.to_stacked_array("mlvar", sample_dims=["batch"], name='mli')
-            # dso = dso.stack({'batch':{'sample','ncol'}})
-            dso = dso.stack({'batch': {'ncol'}})
-            dso = dso.to_stacked_array("mlvar", sample_dims=["batch"], name='mlo')
-
-            yield (ds.values, dso.values)
-
-    return tf.data.Dataset.from_generator(
-        gen,
-        output_types=(tf.float64, tf.float64),
-        output_shapes=((None, 124), (None, 128))
-    )
-
-
-def dataset_to_numpy(dataset: tf.data.Dataset):
-    inputs_list = []
-    outputs_list = []
-    for inputs, outputs in dataset:
-        inputs_list.append(inputs.numpy())
-        outputs_list.append(outputs.numpy())
-    return np.concatenate(inputs_list, axis=0), np.concatenate(outputs_list, axis=0)
-
-
-def getDataPaths(stride_sample=19):
-    f_mli1 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-0[23456789]-*-*.nc')
-    f_mli2 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0005-1[012]-*-*.nc')
-    f_mli3 = glob.glob('../climsim-dataset/ClimSim_low-res/train/*/E3SM-MMF.mli.0006-01-*-*.nc')
-    val_datapaths = [*f_mli1, *f_mli2, *f_mli3]
-    random.shuffle(val_datapaths)
-    return val_datapaths[::stride_sample]
-
-def createScoringData():
-    logging.info("Creating scoring data...")
-    inputs, outputs = dataset_to_numpy(loadNCdir(getDataPaths()))
-    logging.info("Dataset converted! Inputs: " + str(inputs.shape) + "| Outputs" + str(outputs.shape))
-
-    scoringPath = "scoring"
-    os.makedirs(scoringPath, exist_ok=True)
-
-    np.save(f"{scoringPath}/inputs.npy", inputs)
-    np.save(f"{scoringPath}/true_outputs.npy", outputs)
-    logging.info("Data saved!")
 
 def makePredictionsMLP(modelName: str):
     modelPath = f"models/{modelName}"
@@ -487,8 +436,14 @@ def createMetricsCSV(model_name: str, evaluationPath = None):
 #    createMetricsCSV(modelName, evaluationPath=f"models/xgb/{modelName}/evaluation")
 
 
-modelName = "mb_mlp3"
-makePredictionsMLP(modelName)
+#for modelName in ["ed", "mlp2"]:
+#    makePredictionsMLP(modelName)
+#    createMetricsCSV(modelName)
+
+modelName = "cnn4"
+makePredictionsCNN(modelName)
 createMetricsCSV(modelName)
 
-
+modelName = "ed2"
+makePredictionsMLP(modelName)
+createMetricsCSV(modelName)
