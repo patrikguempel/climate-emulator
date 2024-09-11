@@ -141,4 +141,4 @@ def createPlots(models):
         elif kvar == 'ptend_q0001':
             fig.savefig('plots/ptend_q0001.pdf')
 
-createPlots(["mlp1", "cnn2", "mb_mlp3", "xgb/d12"])
+createPlots(["mlp2", "cnn4", "ed"])

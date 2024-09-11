@@ -30,7 +30,7 @@ grid_info = xr.open_dataset(grid_path)
 
 def makePredictionsRF(modelName: str):
     modelPath = f"models/{modelName}"
-    model = joblib.load(modelPath + "/model.pkl")
+    model = joblib.load(modelPath + "/model.joblib")
     logging.info("Model loaded!")
 
     inputs = np.load("scoring/inputs.npy")
@@ -440,10 +440,6 @@ def createMetricsCSV(model_name: str, evaluationPath = None):
 #    makePredictionsMLP(modelName)
 #    createMetricsCSV(modelName)
 
-modelName = "cnn4"
-makePredictionsCNN(modelName)
-createMetricsCSV(modelName)
-
-modelName = "ed2"
+modelName = "mlp_optimized"
 makePredictionsMLP(modelName)
 createMetricsCSV(modelName)

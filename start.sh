@@ -1,11 +1,10 @@
 #!/bin/bash
-#SBATCH --partition=A40short
+#SBATCH --partition=A40medium
 #SBATCH --gpus=1
 #SBATCH --ntasks=1
-#SBATCH --output=./output/slurm_output_gridsearch.txt
-#SBATCH --job-name=grids
+#SBATCH --output=./output/slurm_output_train_mlp_ca.txt
+#SBATCH --job-name=mlp_ca
 
 module load TensorFlow
 source myenv/bin/activate
-echo "ada-boost:"
-python train/train_adaboost.py
+python train/train_mlp_ca.py

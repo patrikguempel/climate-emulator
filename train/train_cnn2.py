@@ -118,7 +118,7 @@ def createModel():
         # First conv layer in block
         # 'same' applies zero padding.
         x = Conv1D(filters=filters, kernel_size=kernel_size, padding="same")(x)
-        # todo: add se_block
+
         if norm_layer:
             x = norm_layer(x)
         x = keras.layers.Activation(hp_activation)(x)

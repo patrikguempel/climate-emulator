@@ -15,12 +15,12 @@ logging.basicConfig(
 )
 
 def grid_search():
-    train_input = np.load('train/npy_data/train_input.npy')[::3000]
-    train_output = np.load('train/npy_data/train_target.npy')[::3000]
+    train_input = np.load('train/npy_data/train_input.npy')[::300]
+    train_output = np.load('train/npy_data/train_target.npy')[::300]
 
     # validation data
-    val_input = np.load('train/npy_data/val_input.npy')[::3000]
-    val_output = np.load('train/npy_data/val_target.npy')[::3000]
+    val_input = np.load('train/npy_data/val_input.npy')[::300]
+    val_output = np.load('train/npy_data/val_target.npy')[::300]
 
     logging.info("Data loaded!")
 
@@ -36,10 +36,10 @@ def grid_search():
     ps = PredefinedSplit(test_fold=split_indices)
 
     param_grid = {
-        'n_estimators': [100, 200, 500, 750, 1000],
-        'max_depth': [None, 10, 30, 50, 100],
+        'n_estimators': [200, 400, 500],
+        'max_depth': [None, 30],
         'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 4]
+        'min_samples_leaf': [1, 2, 5, 10]
     }
 
     logging.info("Performing grid_search...")
@@ -57,14 +57,6 @@ def grid_search():
     y_test_pred = best_model.predict(val_input)
     logging.info(f'Test MSE: {mean_squared_error(val_output, y_test_pred)}')
 
-    # 5. Bestes Modell speichern
-    model_name = "rf1_gridsearch"
-    path = f"models/{model_name}"
-    os.makedirs(path, exist_ok=True)
-
-    joblib.dump(best_model, f'{path}/model.pkl')
-    logging.info(f"Best model saved as {path}/model.pkl")
-
 def train():
     train_input = np.load('train/npy_data/train_input.npy')
     train_output = np.load('train/npy_data/train_target.npy')
@@ -77,7 +69,7 @@ def train():
 
     rf_model = RandomForestRegressor(
         max_depth=None,
-        min_samples_leaf=4,
+        min_samples_leaf=5,
         min_samples_split=2,
         n_estimators=750,
         random_state=42
@@ -90,7 +82,7 @@ def train():
     logging.info(f"Mean Squared Error auf den Validierungsdaten: {mse}")
 
 
-    joblib.dump(rf_model, 'models/final_rf_model.pkl')
+    joblib.dump(rf_model, 'models/final_rf_model.joblib')
     logging.info("Modell wurde gespeichert!")
 
-grid_search()
+train()
