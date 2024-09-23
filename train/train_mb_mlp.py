@@ -10,7 +10,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-model_name = "mb_mlp5"
+
 
 logging.info("Loading Data...")
 
@@ -28,14 +28,14 @@ def createModel():
     outputs = []
     for i in range(10):
         if i < 2:
-            branch_start = layers.Dense(512, activation='relu')(input_layer)
-            out_hid = layers.Dense(256, activation='relu')(branch_start)
-            out_hid2 = layers.Dense(160, activation='elu')(out_hid)
+            branch_start = layers.Dense(750, activation='relu')(input_layer)
+            out_hid = layers.Dense(512, activation='relu')(branch_start)
+            out_hid2 = layers.Dense(256, activation='elu')(out_hid)
             out_lin = layers.Dense(60, activation='linear')(out_hid2)
             outputs += [out_lin]
         else:
-            branch_start = layers.Dense(256, activation='relu')(input_layer)
-            out_hid = layers.Dense(32, activation='elu')(branch_start)
+            branch_start = layers.Dense(250, activation='relu')(input_layer)
+            out_hid = layers.Dense(128, activation='elu')(branch_start)
             out_lin = layers.Dense(1, activation='linear')(out_hid)
             outputs += [out_lin]
 
@@ -81,5 +81,6 @@ def trainModel(model):
               use_multiprocessing=True,
               workers=4,)
 
+model_name = "mb_mlp_175"
 model = createModel()
 trainModel(model)

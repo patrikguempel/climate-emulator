@@ -24,9 +24,9 @@ dval = xgb.DMatrix(val_x, label=val_y)
 
 params = {
     'objective': 'reg:squarederror',            #Used for regression
-    'learning_rate': 0.1,
-    'subsample': 0.6,                           # 80% der Trainingsdaten verwenden
-    'colsample_bytree': 0.8,
+    'learning_rate': 0.01,
+    #'subsample': 0.6,                           # subsampling
+    #'colsample_bytree': 0.6,
     'verbosity': 1,                             #logging
     'tree_method': 'hist',
     'device': 'cuda'                            #make XGB use the GPUs
@@ -55,7 +55,7 @@ def train():
 
     evals = [(dtrain, 'train'), (dval, 'eval')]
 
-    for max_depth in range(10, 17):
+    for max_depth in [15]:
         params['max_depth'] = max_depth
 
         logging.info(f"Training model with max-depth {max_depth}...")
@@ -72,7 +72,32 @@ def train():
         )
 
         logging.info(f"Saving with max-depth {max_depth}...")
-        path = f"./models/xgb/d{max_depth}-s60"
+        path = f"./models/xgb/d{max_depth}-l"
+        os.makedirs(path, exist_ok=True)
+        bst.save_model(f"{path}/model.ubj")
+        logging.info("Done!")
+
+    for max_depth in range():
+        params['max_depth'] = max_depth
+        params['subsample'] = 0.8
+        params['colsample_bytree'] = 0.8
+
+        logging.info(f"Training model with max-depth {max_depth} and subsample 0.8...")
+
+        bst = xgb.train(params,
+                        dtrain,
+                        num_boost_round=5000,
+                        evals=evals,
+                        early_stopping_rounds=50,
+                        callbacks=[
+                            EarlyStopping(rounds=50, save_best=True, maximize=False, data_name='eval',
+                                          metric_name='rmse'),
+                        ],
+                        verbose_eval=True
+                        )
+
+        logging.info(f"Saving with max-depth {max_depth}...")
+        path = f"./models/xgb/d{max_depth}-s80-l"
         os.makedirs(path, exist_ok=True)
         bst.save_model(f"{path}/model.ubj")
         logging.info("Done!")

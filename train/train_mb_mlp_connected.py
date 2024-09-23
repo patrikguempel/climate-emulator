@@ -10,8 +10,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-model_name = "mb_mlp_connected"
-
 logging.info("Loading Data...")
 
 train_x = np.load("train/npy_data/train_input.npy")
@@ -24,9 +22,9 @@ logging.info("Data loaded!")
 def createModel():
 
     input_layer = Input(shape=(124,))
-    start = layers.Dense(1792, activation='relu')(input_layer)
-    hid1 = layers.Dense(320, activation='relu')(start)
-    hid2 = layers.Dense(128, activation='elu')(start)
+    start = layers.Dense(1940, activation='relu')(input_layer)
+    hid1 = layers.Dense(512, activation='relu')(start)
+    hid2 = layers.Dense(160, activation='elu')(start)
     hid = layers.Concatenate()([hid1, hid2])
     out_hid = layers.Dense(256, activation='elu')(hid)
     out_1 = layers.Dense(120, activation='linear')(out_hid)
@@ -73,5 +71,6 @@ def trainModel(model):
               use_multiprocessing=True,
               workers=4,)
 
+model_name = "mb_mlp_connected_175"
 model = createModel()
-#trainModel(model)
+trainModel(model)

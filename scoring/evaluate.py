@@ -3,6 +3,7 @@ import os
 import random
 
 import joblib
+import keras
 import tensorflow as tf
 import xarray as xr
 import numpy as np
@@ -45,7 +46,24 @@ def makePredictionsRF(modelName: str):
     np.save(f"{evaluationPath}/predictions.npy", predictions)
     logging.info("Predictions saved!")
 
+def makePredictionsMLPCA(modelName: str):
+    modelPath = f"models/{modelName}"
+    model: keras.Model = tf.keras.models.load_model(f"{modelPath}/model.h5")
+    logging.info("Model loaded!")
 
+    inputs = np.load("scoring/inputs.npy")
+    logging.info("Scoring Data loaded!")
+
+    predictions = model.predict(inputs)
+    logging.info("Predictions made!")
+
+    logging.info(predictions.shape)
+
+    #evaluationPath = f"{modelPath}/evaluation"
+    #os.makedirs(evaluationPath, exist_ok=True)
+
+    #np.save(f"{evaluationPath}/predictions.npy", predictions)
+    #logging.info("Predictions saved!")
 
 def makePredictionsMLP(modelName: str):
     modelPath = f"models/{modelName}"
@@ -117,7 +135,7 @@ def makePredictionsCNN(modelName: str):
 def makePredictionsXGB(modelName: str):
     xgp_path = f"models/xgb/{modelName}"
 
-    bst = xgb.Booster({'predictor': 'gpu_predictor'})
+    bst = xgb.Booster()
     bst.load_model(f"{xgp_path}/model.ubj")
     logging.info("Model loaded!")
 
@@ -431,15 +449,15 @@ def createMetricsCSV(model_name: str, evaluationPath = None):
     logging.info("Done!")
 
 
-#for modelName in ["d15-s80"]:
+#for modelName in ["d10-l", "d11-l", "d12-l", "d13-l", "d14-l"]:
 #    makePredictionsXGB(modelName)
 #    createMetricsCSV(modelName, evaluationPath=f"models/xgb/{modelName}/evaluation")
 
 
-#for modelName in ["ed", "mlp2"]:
-#    makePredictionsMLP(modelName)
-#    createMetricsCSV(modelName)
+for modelName in ["mlp_ca8-2", "mlp_ca8-3"]:
+    makePredictionsMLP(modelName)
+    createMetricsCSV(modelName)
 
-modelName = "mlp_optimized"
-makePredictionsMLP(modelName)
-createMetricsCSV(modelName)
+#modelName = "mlp_ca3_pluselu"
+#makePredictionsMLP(modelName)
+#createMetricsCSV(modelName)
