@@ -1,6 +1,4 @@
-import glob
 import os
-import random
 
 import joblib
 import keras
@@ -45,25 +43,6 @@ def makePredictionsRF(modelName: str):
 
     np.save(f"{evaluationPath}/predictions.npy", predictions)
     logging.info("Predictions saved!")
-
-def makePredictionsMLPCA(modelName: str):
-    modelPath = f"models/{modelName}"
-    model: keras.Model = tf.keras.models.load_model(f"{modelPath}/model.h5")
-    logging.info("Model loaded!")
-
-    inputs = np.load("scoring/inputs.npy")
-    logging.info("Scoring Data loaded!")
-
-    predictions = model.predict(inputs)
-    logging.info("Predictions made!")
-
-    logging.info(predictions.shape)
-
-    #evaluationPath = f"{modelPath}/evaluation"
-    #os.makedirs(evaluationPath, exist_ok=True)
-
-    #np.save(f"{evaluationPath}/predictions.npy", predictions)
-    #logging.info("Predictions saved!")
 
 def makePredictionsMLP(modelName: str):
     modelPath = f"models/{modelName}"

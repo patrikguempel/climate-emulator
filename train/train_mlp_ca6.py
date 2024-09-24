@@ -43,7 +43,7 @@ def create_model():
     concat_branches = tf.concat(expanded_branches, axis=1)
     concat_branches_normalized = LayerNormalization()(concat_branches)
 
-    # Cross attention
+    # self attention
     attention_output = MultiHeadAttention(num_heads=2, key_dim=64)(concat_branches_normalized, concat_branches_normalized)
 
     # skip connection: add two normalized tensors
